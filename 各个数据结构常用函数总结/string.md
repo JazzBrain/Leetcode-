@@ -22,14 +22,14 @@ s.erase(s.begin() + 1, 3);
 快慢指针去除abc   bdf  kk 字符串的空格
 
 ```c++
-slow = 0 ; 
+slow = 0; 
 fast = 0;
 while(fast < size && s[fast] == ' ') {
   fast ++;//取出前面空格
 }
 
 while(fast < size) {
-  if(fast - 1 > 0 && s[fast] == ' ' && s[fast-1] == ' ') {
+  if(fast - 1 > 0 && s[fast] == ' ' && s[fast - 1] == ' ') {
     fast++;
     continue;
   }
@@ -39,7 +39,18 @@ while(fast < size) {
 }
 
 //最后要判断slow最后一位是不是' '
-if(slow > 1 && s[slow - 1] == ' ') s.resize(slow-1);
+if(slow > 1 && s[slow - 1] == ' ') s.resize(slow - 1);
 else s.resize(slow);
 ```
+
+字符串也可以模拟stack
+
+```c++
+string result;
+result.pop_back();
+```
+
+
+
+
 
