@@ -18,7 +18,7 @@ if(t.joinable()) // 只能join一次，没有join的话 下一步join
 
 ```
 
-需确保线程在函数之前结束 所以可以使用一些方法，使用“资源获取即初始化方式”(RAII，Resource Acquisition Is Initialization)，并且提供一个类，在析构函数中使用**join()**
+需确保线程在函数之前结束 所以可以使用一些方法，使用资源获取即初始化方式(RAII，Resource Acquisition Is Initialization)，并且提供一个类，在析构函数中使用**join()**
 
 ```c++
 class thread_guard
@@ -166,3 +166,24 @@ void some_core_part_of_algorithm()
 
 
 ## 线程间共享数据
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
