@@ -67,47 +67,75 @@ emplace_back直接在末尾调用构造函数创建对象
 
 ```c++
 class LRUCache {
-    list<pair<int, int>> cache;//创建双向链表
-    unordered_map<int, list<pair<int, int>>::iterator> map;//创建哈希表
-    int cap;
 public:
+
+    struct Node {
+        int key,value;
+        Node *left;
+        Node *right;
+        Node(int _key,int _value):key(_key),value(_value),left(nullptr),right(nullptr){};
+    };
+    unordered_map<int,Node*>hash;
+    Node *L;
+    Node* R;
+    int n;
+
+    void remove(Node* p)//删除p节点
+    {
+        p->right->left = p->left;
+        p->left->right = p->right;
+    }
+    void insert(Node *p) //插到头节点的位置
+    {
+        p->right = L->right;
+        p->left = L;
+        L->right->left = p;
+        L->right = p;
+    }
+
+
     LRUCache(int capacity) {
-        cap = capacity;
+        n = capacity;
+        L = new Node(-1,-1);
+        R = new Node(-1,-1);
+        L->right = R;
+        R->left = L;
     }
-
+    
     int get(int key) {
-        if (map.count(key) > 0){
-            auto temp = *map[key];
-            cache.erase(map[key]);
-            map.erase(key);
-            cache.push_front(temp);
-            map[key] = cache.begin();//映射头部
-            return temp.second;
-        }
-        return -1;
+        //如果key存在，那么把他放到链表头部
+        //如果不存在，分为两种情况，第一容量够，插到链表头；第二容量不够，移除链表尾部，插入链表头部
+        if(hash.count(key) == 0) return -1; //不存在关键字 key 
+        auto p = hash[key];
+        remove(p);
+        insert(p);//将当前节点放在双链表的第一位
+        return p->value;
     }
-
+    
     void put(int key, int value) {
-        if (map.count(key) > 0){
-            cache.erase(map[key]);
-            map.erase(key);
+        //key存在 移到链表头
+        //分为两种情况，第一容量够，插到链表头；第二容量不够，移除链表尾部，插入链表头部
+        if(hash.find(key) != hash.end()) {
+            auto p = hash[key];
+            p->value = value;
+            remove(p);
+            insert(p);
         }
-        else if (cap == cache.size()){
-            auto temp = cache.back();
-            map.erase(temp.first);
-            cache.pop_back();
+        else {
+            if(hash.size() == n) //如果缓存已满，则删除双链表最右侧的节点
+            {
+                auto  p = R->left;
+                remove(p);
+                hash.erase(p->key); //更新哈希表
+                delete p; //释放内存
+            }
+            //否则，插入(key, value)
+            auto p = new Node(key,value);
+            hash[key] = p;
+            insert(p);
         }
-        cache.push_front(pair<int, int>(key, value));
-        map[key] = cache.begin();//映射头部
     }
 };
-
-/**
- * Your LRUCache object will be instantiated and called as such:
- * LRUCache* obj = new LRUCache(capacity);
- * int param_1 = obj->get(key);
- * obj->put(key,value);
- */
 ```
 
 ### 4.缺页中断
@@ -288,6 +316,22 @@ SYN Flood是当前最流行的DoS（拒绝服务攻击）与DDoS(分布式拒绝
 主要是进行流量控制的方法，发送方维持，接收方高速发送方自己能接受的大小，控制发送当窗口的大小，防止发送过多数据导致被淹没
 ```
 
+### 面试题
+
+### HTTP 和 TCP的区别
+
+\1. https握手流程？http和https之间有什么区别？哪个性能更好？如何优化http使得和https的性能相似？从tcp级别考虑呢？
+
+\2. DNS的原理是什么？了解DNS劫持吗？如何防劫持？
+
+\3. HTTP Get和Post有什么区别？不只要懂原理，还要会实际运用。
+
+\4. tcp的滑动窗口和拥塞控制，目前的[算法](https://www.nowcoder.com/jump/super-jump/word?word=算法)是怎样的。
+
+\5. https为什么安全？还能不能从某些方面变得更加安全？
+
+\6. TCP和UDP的区别？是否可以使用UDP变得像TCP一样可靠？
+
 ### 7如果第三次握手失败
 
 ```
@@ -311,10 +355,10 @@ client 一般是通过 connect() 函数来连接服务器的，而connect()是�
 
 ```
 虚基类指针 虚基类表
-每个虚继承的子类都有一个虚基类指针，指向虚基类表，里面存放着该类到虚基类的偏移地址
+每个虚继承的子类都有一个虚基类指针（占用类的空间，4字节），指向虚基类表（不占用类对象空间），里面存放着该类到虚基类的偏移地址
 
-虚函数指针 虚函数表
-如果重写了虚函数，虚函数表里面对应的虚函数入口地址就会发生改变
+虚函数指针 虚函数表(在对象的空间中)
+如果子类重写了虚函数，虚函数表里面对应的虚函数入口地址就会发生改变
 
 static不能是虚函数，因为没有this指针，虚函数是对于对象的
 ```
@@ -365,6 +409,8 @@ struct/class/union
 
 # C++基础知识
 
+### 面试题：手撕智能指针share_ptr
+
 ### 1.C++和C的区别
 
 ```
@@ -396,7 +442,177 @@ c里面声明的时候需要使用struct关键字，而且不能继承，不能�
 （2）使用双引号""的头文件的查找路径：当前头文件目录-->编译器设置的头文件路径-->系统变量。
 ```
 
+### 4.野指针
 
+```
+指针指向的位置是不可知的
+原因：没有初始化，释放内存之后指针没有置空
+
+避免方法：使用智能指针；使用后及时置空；记得初始化为nullptr
+```
+
+### 5.内联函数和宏函数
+
+```
+宏函数没有类型检查，无论对错都直接替换。不算是函数，只是替换，预处理阶段 （注意括号）
+而内联函数则是在编译的时候进行代码插入，编译器会在每处调用内联函数的地方直接把内联函数的内容展开，这样可以省去函数的调用的开销，提高效率（但是以空间换时间）
+```
+
+### 6.i++，++i
+
+```
+赋值顺序
+i++速度比较慢
+```
+
+
+
+### 7.如何实现哈希表
+
+```
+使用数组和映射函数，可以用线性探测法解决冲突
+或者用链表，如果链表太长，可以用红黑树代替链表
+```
+
+### 8.B树和B+树和红黑树
+
+```
+索引一般用哈希或者B+树，为什么不用二分查找树：因为为了降低磁盘IO次数
+
+B+树的信息都在叶子结点上，查询只需要循环链表即可。
+所有查询都要查找到叶子节点，查询性能稳定。
+单一节点存储更多的元素，使得查询的IO次数更少。
+所有叶子节点形成有序链表，便于范围查询。
+B+树特点：
+所有的中间节点元素都同时存在于子节点，在子节点元素中是最大（或最小）元素。
+所有的叶子结点中包含了全部元素的信息
+
+
+B树：一个m阶的B树具有如下几个特征
+1.根结点至少有两个子女。
+2.每个中间节点都包含k-1个元素和k个孩子，其中 m/2 <= k <= m
+3.每一个叶子节点都包含k-1个元素，其中 m/2 <= k <= m
+4.所有的叶子结点都位于同一层。
+```
+
+
+
+### 9.new 和malloc的区别
+
+```
+new是操作符，而malloc是函数。
+new在调用的时候先分配内存，在调用构造函数，释放的时候调用析构函数；而malloc没有构造函数和析构函数。
+new可以被重载；malloc不行
+new发生错误抛出异常，malloc返回null
+```
+
+
+
+------
+
+# c++新特性
+
+### nullptr
+
+### 统一的初始化方法，初始化列表
+
+```
+初始化列表：在 C++11 中，可以直接在变量名后面跟上初始化列表，来进行对象的初始化。
+```
+
+### 基于范围的for循环 : 
+
+### final，override
+
+fina修饰的类不能被继承，override修饰的函数表示被重写了
+
+### 智能指针
+
+```
+unique_ptr
+share_ptr
+weak_ptr : 解决了share_ptr相互引用计数不能为0的bug
+```
+
+### 模版
+
+### 匿名函数
+
+### 正则表达式
+
+### auto关键字
+
+```
+编译器自动判断类型
+使用auto定义迭代器
+当我们不知道变量是什么类型，或者不希望指明具体类型的时候，比如泛型编程中
+```
+
+### decltype关键字
+
+**decltype根据左边的表达式推断类型，跟右边的变量没有关系**
+
+```c++
+// decltype 用法举例
+nt a = 0;
+decltype(a) b = 1;  //b 被推导成了 int
+decltype(10.8) x = 5.5;  //x 被推导成了 double
+decltype(x + 100) y;  //y 被推导成了 double
+```
+
+### 右值引用和move语义 让程序员有意识减少进行深拷贝操作
+
+### 
+
+### 四种类型转换
+
+```
+const_cast : 将const常量转换成非const常量
+static_cast : 可以用于各种隐式转换，比如非const转const，可以用于类向上转换，但向下转换能成功但是不安全。
+dynamic_cast : 只能用于含有虚函数的类转换，用于类向上和向下转换。通过判断变量运行时类型和要转换的类型是否相同来判断是否能够进行向下转换。
+reinterpret_cast :  reinterpret_cast可以做任何类型的转换，不过不对转换结果保证，容易出问题。
+```
+
+
+
+# 面试题目
+
+1. HTTP和HTTPS**（追问HTTPS为什么是安全，只知道SSL层加解密）**
+
+2. TCP三次握手，为什么不能是两次？两次会导致什么问题？
+
+3. 排序算法
+
+4. 段页式存储
+
+   ```
+   三次访问内存
+   根据段表 找到段号 以及页表基址和页表长度， 根据页表找到块号和页内偏移
+   
+   页号 块号 （将地址解析成页号和页内偏移，然后根据页号找到块号）
+   段号，段长，基址（将地址解析成段号和段内偏移） 
+   段号，页号，页内地址（）
+   ```
+
+5. LRU怎么设计
+
+   ```
+   哈希表 + 双链表
+   
+   两个函数，头节点插入，删除
+   
+   put
+   如果链表节点不存在，判断容量满不满，满了 删除尾节点，更新哈希表，插入头，更新哈希表；没满插入头，更新哈希表
+   如果链表节点存在，更新哈希表，删除节点，重新插入头
+   
+   get
+   如果没找到 返回-1
+   找到了，删除当前节点，重新插入头节点，返回value
+   ```
+
+   
+
+6. HTTPS如何保障安全性 、讲讲SSL层的建立连接过程
 
 
 
